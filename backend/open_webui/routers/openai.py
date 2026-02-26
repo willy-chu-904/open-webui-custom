@@ -59,6 +59,14 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from sqlalchemy import func
+from fastapi.responses import JSONResponse
+
+from open_webui.internal.db import get_db
+from open_webui.models.messages import Message
+
 log = logging.getLogger(__name__)
 
 
@@ -941,6 +949,32 @@ async def generate_chat_completion(
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
 ):
+
+    # ===== Daily Limit Control (10 requests per day, HK Time) =====
+    db = next(get_db())
+
+    if user.role != "admin":
+        hk_today = datetime.now(HK_TZ).date()
+
+        count = (
+            db.query(func.count(Message.id))
+            .filter(Message.user_id == user.id)
+            .filter(
+                func.date(
+                    func.datetime(Message.created_at, "+8 hours")
+                ) == hk_today
+            )
+            .scalar()
+        )
+
+        if count >= 10:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "Daily limit reached (10 requests). Upgrade required."
+                },
+            )
+    
     # NOTE: We intentionally do NOT use Depends(get_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
