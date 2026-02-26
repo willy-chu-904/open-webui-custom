@@ -559,6 +559,11 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
+
+from open_webui.db import engine, Base
+
+Base.metadata.create_all(bind=engine)
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
