@@ -1281,7 +1281,6 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
 @router.post("/api/chat")
 @router.post("/api/chat/{url_idx}")
 async def generate_chat_completion(
-    raise HTTPException(status_code=418, detail="API CHAT HIT")
     request: Request,
     form_data: dict,
     url_idx: Optional[int] = None,
@@ -1289,6 +1288,7 @@ async def generate_chat_completion(
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
 ):
+    raise HTTPException(status_code=418, detail="API CHAT HIT")
     if not request.app.state.config.ENABLE_OLLAMA_API:
         raise HTTPException(status_code=503, detail="Ollama API is disabled")
 
