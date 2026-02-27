@@ -27,11 +27,15 @@ from sqlalchemy import (
     exists,
     select,
     cast,
+    Integer
 )
 from sqlalchemy import or_, case, func
 from sqlalchemy.dialects.postgresql import JSONB
 
 import datetime
+
+daily_count = Column(Integer, default=0)
+daily_date = Column(String, default="")
 
 ####################
 # User DB Schema
