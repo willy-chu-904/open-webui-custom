@@ -71,10 +71,6 @@ from open_webui.env import (
 )
 from open_webui.constants import ERROR_MESSAGES
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from fastapi.responses import StreamingResponse
-
 log = logging.getLogger(__name__)
 
 
@@ -1292,37 +1288,6 @@ async def generate_chat_completion(
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
 ):
-    # 1. 初始化 store (這在多進程環境下不精準，但能跑)
-    if not hasattr(generate_chat_completion, "daily_limit_store"):
-        generate_chat_completion.daily_limit_store = {}
-
-    store = generate_chat_completion.daily_limit_store
-    now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
-    today = now.strftime("%Y-%m-%d")
-    user_id = user.id
-
-    # 2. 初始化用戶數據
-    if user_id not in store or store[user_id]["date"] != today:
-        store[user_id] = {"date": today, "count": 0}
-
-    # 3. 檢查限制
-    if store[user_id]["count"] >= 10:
-        error_msg = "Daily limit reached (10 requests). Upgrade required."
-        
-        # 關鍵：定義一個生成器來模擬串流，解決 body_iterator 報錯
-        async def error_generator():
-            # 包裝成 OpenAI 兼容的錯誤格式
-            err_resp = {"error": {"message": error_msg, "type": "limit_reached", "code": "403"}}
-            yield f"data: {json.dumps(err_resp)}\n\n"
-            yield "data: [DONE]\n\n"
-
-        # 回傳 StreamingResponse 而不是 JSONResponse
-        return StreamingResponse(error_generator(), media_type="text/event-stream")
-
-    # 4. 增加計數
-    store[user_id]["count"] += 1
-    print(f"DEBUG: User {user_id} count is {store[user_id]['count']}")
-    
     if not request.app.state.config.ENABLE_OLLAMA_API:
         raise HTTPException(status_code=503, detail="Ollama API is disabled")
 
@@ -1541,41 +1506,6 @@ async def generate_openai_chat_completion(
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop("metadata", None)
-
-        # ===== Daily Limit Control (10 requests per day, HK Time) =====
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    from fastapi.responses import JSONResponse
-    from open_webui.models.users import Users
-    from open_webui.internal.db import get_session
-
-    try:
-        db = next(get_session())
-        db_user = db.query(Users).filter(Users.id == user.id).first()
-
-        now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
-        today = now.strftime("%Y-%m-%d")
-
-        # 如果是新的一天 → 重置
-        if db_user.daily_date != today:
-            db_user.daily_date = today
-            db_user.daily_count = 0
-
-        # 超過 10 次 → 擋下
-        if db_user.daily_count >= 10:
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "error": "Daily limit reached (10 requests). Upgrade required."
-                },
-            )
-
-        # 增加計數
-        db_user.daily_count += 1
-        db.commit()
-
-    except Exception as e:
-        print("Daily limit error:", e)
 
     try:
         completion_form = OpenAIChatCompletionForm(**form_data)
