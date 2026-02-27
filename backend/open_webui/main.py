@@ -1691,15 +1691,21 @@ async def chat_completion(
 
     # 超過 10 次
     if store[user_id]["count"] >= 10:
+    # --- 這裡必須縮排 ---
     error_msg = "Daily limit reached (10 requests). Upgrade required."
     
-    # 模擬一個符合 StreamingResponse 格式的內容
+    # 解決 JSONResponse 沒有 body_iterator 的問題：
+    # 我們改用 StreamingResponse 回傳，這能避開 Open WebUI 中間層的崩潰
     async def error_generator():
-        yield f'data: {json.dumps({"error": error_msg})}\n\n'
-        
-    return StreamingResponse(error_generator(), media_type="text/event-stream")
+        # 包裝成前端能理解的 JSON 格式並以串流送出
+        yield f"data: {json.dumps({'error': error_msg})}\n\n"
+        yield "data: [DONE]\n\n"
 
-    store[user_id]["count"] += 1
+    return StreamingResponse(error_generator(), media_type="text/event-stream")
+# --- 縮排結束 ---
+
+# 如果沒超過 10 次，繼續執行後面的邏輯
+store[user_id]["count"] += 1
     print("Daily Count:", store[user_id]["count"])
 
 
