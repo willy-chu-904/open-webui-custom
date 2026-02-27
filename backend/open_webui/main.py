@@ -1691,12 +1691,13 @@ async def chat_completion(
 
     # 超過 10 次
     if store[user_id]["count"] >= 10:
-        return JSONResponse(
-            status_code=403,
-            content={
-                "error": "Daily limit reached (10 requests). Upgrade required."
-            },
-        )
+    error_msg = "Daily limit reached (10 requests). Upgrade required."
+    
+    # 模擬一個符合 StreamingResponse 格式的內容
+    async def error_generator():
+        yield f'data: {json.dumps({"error": error_msg})}\n\n'
+        
+    return StreamingResponse(error_generator(), media_type="text/event-stream")
 
     store[user_id]["count"] += 1
     print("Daily Count:", store[user_id]["count"])
