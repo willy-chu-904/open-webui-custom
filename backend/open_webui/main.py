@@ -563,7 +563,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import engine, Base
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from fastapi.responses import HTTPException
+from fastapi import HTTPException
 
 Base.metadata.create_all(bind=engine)
 
