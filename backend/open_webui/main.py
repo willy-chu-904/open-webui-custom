@@ -560,7 +560,7 @@ from open_webui.utils.redis import get_sentinels_from_env
 from open_webui.constants import ERROR_MESSAGES
 
 
-from open_webui.db import engine, Base
+from open_webui.internal.db import engine, Base
 
 Base.metadata.create_all(bind=engine)
 
