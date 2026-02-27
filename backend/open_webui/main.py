@@ -1668,6 +1668,10 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+
+
+
+    raise HTTPException(status_code=418, detail="MAIN.PY HIT")
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
