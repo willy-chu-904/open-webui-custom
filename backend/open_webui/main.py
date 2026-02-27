@@ -1671,43 +1671,42 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    # ===== Daily Limit (10 per day, HK time) =====
+    # 1. 初始化 store (確保在函式內縮排)
     if not hasattr(chat_completion, "daily_limit_store"):
         chat_completion.daily_limit_store = {}
 
     store = chat_completion.daily_limit_store
-
     now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
     today = now.strftime("%Y-%m-%d")
-
     user_id = user.id
 
+    # 2. 檢查使用者紀錄是否存在
     if user_id not in store:
         store[user_id] = {"date": today, "count": 0}
 
-    # 新的一天重置
+    # 3. 如果日期換了，重設計數
     if store[user_id]["date"] != today:
         store[user_id] = {"date": today, "count": 0}
 
-    # 超過 10 次
+    # 4. 判斷是否超過 10 次
     if store[user_id]["count"] >= 10:
-    # --- 這裡必須縮排 ---
-    error_msg = "Daily limit reached (10 requests). Upgrade required."
-    
-    # 解決 JSONResponse 沒有 body_iterator 的問題：
-    # 我們改用 StreamingResponse 回傳，這能避開 Open WebUI 中間層的崩潰
-    async def error_generator():
-        # 包裝成前端能理解的 JSON 格式並以串流送出
-        yield f"data: {json.dumps({'error': error_msg})}\n\n"
-        yield "data: [DONE]\n\n"
+        # --- 這裡所有內容都必須相對於 if 縮排 4 個空格 ---
+        error_msg = "Daily limit reached (10 requests). Upgrade required."
+        
+        async def error_generator():
+            # 模擬 OpenAI 格式的錯誤流，防止 JSONResponse 導致的 body_iterator 報錯
+            error_json = json.dumps({"error": {"message": error_msg, "type": "limit_reached"}})
+            yield f"data: {error_json}\n\n"
+            yield "data: [DONE]\n\n"
 
-    return StreamingResponse(error_generator(), media_type="text/event-stream")
-# --- 縮排結束 ---
+        return StreamingResponse(error_generator(), media_type="text/event-stream")
+    # --- 限制檢查結束 ---
 
-# 如果沒超過 10 次，繼續執行後面的邏輯
-store[user_id]["count"] += 1
-    print("Daily Count:", store[user_id]["count"])
+    # 5. 通過檢查，計數加 1 (確保這行也在函式內縮排)
+    store[user_id]["count"] += 1
+    print(f"User: {user_id}, Daily Count: {store[user_id]['count']}")
 
+    # ... 這裡接原本後續處理回覆的邏輯 ...
 
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
