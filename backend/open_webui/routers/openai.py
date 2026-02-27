@@ -62,7 +62,7 @@ from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from sqlalchemy import func
-from fastapi.responses import JSONResponse
+from fastapi.responses import StreamingResponse
 
 from open_webui.internal.db import get_db
 from open_webui.models.messages import Message
@@ -945,35 +945,41 @@ def convert_responses_result(response: dict) -> dict:
 async def generate_chat_completion(
     request: Request,
     form_data: dict,
+    url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
 ):
+    # 1. 初始化 store (這在多進程環境下不精準，但能跑)
+    if not hasattr(generate_chat_completion, "daily_limit_store"):
+        generate_chat_completion.daily_limit_store = {}
 
-    # ===== Daily Limit Control (10 requests per day, HK Time) =====
-    db = next(get_db())
+    store = generate_chat_completion.daily_limit_store
+    now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
+    today = now.strftime("%Y-%m-%d")
+    user_id = user.id
 
-    if user.role != "admin":
-        hk_today = datetime.now(HK_TZ).date()
+    # 2. 初始化用戶數據
+    if user_id not in store or store[user_id]["date"] != today:
+        store[user_id] = {"date": today, "count": 0}
 
-        count = (
-            db.query(func.count(Message.id))
-            .filter(Message.user_id == user.id)
-            .filter(
-                func.date(
-                    func.datetime(Message.created_at, "+8 hours")
-                ) == hk_today
-            )
-            .scalar()
-        )
+    # 3. 檢查限制
+    if store[user_id]["count"] >= 10:
+        error_msg = "Daily limit reached (10 requests). Upgrade required."
+        
+        # 關鍵：定義一個生成器來模擬串流，解決 body_iterator 報錯
+        async def error_generator():
+            # 包裝成 OpenAI 兼容的錯誤格式
+            err_resp = {"error": {"message": error_msg, "type": "limit_reached", "code": "403"}}
+            yield f"data: {json.dumps(err_resp)}\n\n"
+            yield "data: [DONE]\n\n"
 
-        if count >= 10:
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "error": "Daily limit reached (10 requests). Upgrade required."
-                },
-            )
+        # 回傳 StreamingResponse 而不是 JSONResponse
+        return StreamingResponse(error_generator(), media_type="text/event-stream")
+
+    # 4. 增加計數
+    store[user_id]["count"] += 1
+    print(f"DEBUG: User {user_id} count is {store[user_id]['count']}")
     
     # NOTE: We intentionally do NOT use Depends(get_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
