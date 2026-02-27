@@ -561,6 +561,9 @@ from open_webui.constants import ERROR_MESSAGES
 
 
 from open_webui.internal.db import engine, Base
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from fastapi.responses import JSONResponse
 
 Base.metadata.create_all(bind=engine)
 
@@ -1665,10 +1668,6 @@ async def embeddings(
 @app.post("/api/v1/chat/completions")  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
         # ===== Daily Limit (10 per day, HK time) =====
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    from fastapi.responses import JSONResponse
-
     if not hasattr(chat_completions, "daily_limit_store"):
         chat_completions.daily_limit_store = {}
 
