@@ -1664,6 +1664,39 @@ async def embeddings(
 @app.post("/api/chat/completions")
 @app.post("/api/v1/chat/completions")  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
+        # ===== Daily Limit (10 per day, HK time) =====
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from fastapi.responses import JSONResponse
+
+    if not hasattr(chat_completions, "daily_limit_store"):
+        chat_completions.daily_limit_store = {}
+
+    store = chat_completions.daily_limit_store
+
+    now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
+    today = now.strftime("%Y-%m-%d")
+
+    user_id = user.id
+
+    if user_id not in store:
+        store[user_id] = {"date": today, "count": 0}
+
+    # 新的一天重置
+    if store[user_id]["date"] != today:
+        store[user_id] = {"date": today, "count": 0}
+
+    # 超過 10 次
+    if store[user_id]["count"] >= 10:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "Daily limit reached (10 requests). Upgrade required."
+            },
+        )
+
+    store[user_id]["count"] += 1
+    print("Daily Count:", store[user_id]["count"])
     request: Request,
     form_data: dict,
     user=Depends(get_verified_user),
