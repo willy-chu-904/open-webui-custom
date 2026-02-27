@@ -1667,11 +1667,23 @@ async def embeddings(
 @app.post("/api/chat/completions")
 @app.post("/api/v1/chat/completions")  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
-        # ===== Daily Limit (10 per day, HK time) =====
-    if not hasattr(chat_completions, "daily_limit_store"):
-        chat_completions.daily_limit_store = {}
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
 
-    store = chat_completions.daily_limit_store
+
+
+    
+    # ===== Daily Limit (10 per day, HK time) =====
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from fastapi.responses import JSONResponse
+
+    if not hasattr(chat_completion, "daily_limit_store"):
+        chat_completion.daily_limit_store = {}
+
+    store = chat_completion.daily_limit_store
 
     now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
     today = now.strftime("%Y-%m-%d")
@@ -1696,10 +1708,7 @@ async def chat_completion(
 
     store[user_id]["count"] += 1
     print("Daily Count:", store[user_id]["count"])
-    request: Request,
-    form_data: dict,
-    user=Depends(get_verified_user),
-):
+
 
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
