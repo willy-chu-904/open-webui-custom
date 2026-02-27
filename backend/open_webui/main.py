@@ -1671,15 +1671,7 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-
-
-
-    
     # ===== Daily Limit (10 per day, HK time) =====
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    from fastapi.responses import JSONResponse
-
     if not hasattr(chat_completion, "daily_limit_store"):
         chat_completion.daily_limit_store = {}
 
