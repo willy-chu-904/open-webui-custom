@@ -1507,6 +1507,41 @@ async def generate_openai_chat_completion(
     # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop("metadata", None)
 
+        # ===== Daily Limit Control (10 requests per day, HK Time) =====
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from fastapi.responses import JSONResponse
+    from open_webui.models.users import Users
+    from open_webui.internal.db import get_session
+
+    try:
+        db = next(get_session())
+        db_user = db.query(Users).filter(Users.id == user.id).first()
+
+        now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
+        today = now.strftime("%Y-%m-%d")
+
+        # 如果是新的一天 → 重置
+        if db_user.daily_date != today:
+            db_user.daily_date = today
+            db_user.daily_count = 0
+
+        # 超過 10 次 → 擋下
+        if db_user.daily_count >= 10:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "Daily limit reached (10 requests). Upgrade required."
+                },
+            )
+
+        # 增加計數
+        db_user.daily_count += 1
+        db.commit()
+
+    except Exception as e:
+        print("Daily limit error:", e)
+
     try:
         completion_form = OpenAIChatCompletionForm(**form_data)
     except Exception as e:
