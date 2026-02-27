@@ -71,6 +71,10 @@ from open_webui.env import (
 )
 from open_webui.constants import ERROR_MESSAGES
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from fastapi.responses import JSONResponse
+
 log = logging.getLogger(__name__)
 
 
@@ -1288,7 +1292,31 @@ async def generate_chat_completion(
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
 ):
-    raise HTTPException(status_code=418, detail="API CHAT HIT")
+
+if not hasattr(generate_chat_completion, "daily_limit_store"):
+    generate_chat_completion.daily_limit_store = {}
+
+store = generate_chat_completion.daily_limit_store
+
+now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
+today = now.strftime("%Y-%m-%d")
+user_id = user.id
+
+if user_id not in store:
+    store[user_id] = {"date": today, "count": 0}
+
+if store[user_id]["date"] != today:
+    store[user_id] = {"date": today, "count": 0}
+
+if store[user_id]["count"] >= 10:
+    return JSONResponse(
+        status_code=403,
+        content={"error": "Daily limit reached (10 requests). Upgrade required."},
+    )
+
+store[user_id]["count"] += 1
+print("Daily count:", store[user_id]["count"])
+    
     if not request.app.state.config.ENABLE_OLLAMA_API:
         raise HTTPException(status_code=503, detail="Ollama API is disabled")
 
