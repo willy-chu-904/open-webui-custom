@@ -1281,6 +1281,7 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
 @router.post("/api/chat")
 @router.post("/api/chat/{url_idx}")
 async def generate_chat_completion(
+    raise HTTPException(status_code=418, detail="API CHAT HIT")
     request: Request,
     form_data: dict,
     url_idx: Optional[int] = None,
