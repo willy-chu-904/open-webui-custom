@@ -561,10 +561,7 @@ from open_webui.constants import ERROR_MESSAGES
 
 from custom.middleware import RollingLimitMiddleware
 
-app.add_middleware(RollingLimitMiddleware)
 
-
-Base.metadata.create_all(bind=engine)
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -2631,3 +2628,5 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
+
+app.add_middleware(RollingLimitMiddleware)
