@@ -560,11 +560,6 @@ from open_webui.utils.redis import get_sentinels_from_env
 from open_webui.constants import ERROR_MESSAGES
 
 
-from open_webui.internal.db import engine, Base
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from fastapi import HTTPException
-
 Base.metadata.create_all(bind=engine)
 
 if SAFE_MODE:
@@ -1673,30 +1668,7 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
 
-    # ===== Daily Limit (10 per day, HK Time) =====
-    if not hasattr(chat_completion, "daily_limit_store"):
-        chat_completion.daily_limit_store = {}
-
-    store = chat_completion.daily_limit_store
-
-    now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
-    today = now.strftime("%Y-%m-%d")
-    user_id = user.id
-
-    if user_id not in store or store[user_id]["date"] != today:
-        store[user_id] = {"date": today, "count": 0}
-
-    if store[user_id]["count"] >= 10:
-        raise HTTPException(
-            status_code=403,
-            detail="Daily limit reached (10 requests). Upgrade required."
-        )
-
-    store[user_id]["count"] += 1
-    print("Daily Count:", store[user_id]["count"])
-
-    # ... 這裡接原本後續處理回覆的邏輯 ...
-
+    
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
