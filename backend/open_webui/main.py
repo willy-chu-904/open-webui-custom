@@ -559,8 +559,8 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
-from custom.middleware import DailyLimitMiddleware
-app.add_middleware(DailyLimitMiddleware)
+from custom.middleware import RollingLimitMiddleware
+app.add_middleware(RollingLimitMiddleware)
 
 
 Base.metadata.create_all(bind=engine)
