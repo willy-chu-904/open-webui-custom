@@ -559,7 +559,9 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
-from custom.middleware import RollingLimitMiddleware
+from fastapi import HTTPException, Depends, Request
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 
 
@@ -1669,6 +1671,48 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
 
+    # ===== Admin 無限制 =====
+    if getattr(user, "role", None) == "admin":
+        print("Admin bypass limit")
+        return await original_chat_completion_logic(request, form_data, user)
+        # ⚠️ 注意：下面說明如何接回原本邏輯
+
+
+    # ===== Rolling 6-Hour Limit =====
+    if not hasattr(chat_completion, "limit_store"):
+        chat_completion.limit_store = {}
+
+    store = chat_completion.limit_store
+    user_id = user.id
+    now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
+
+    # 如果沒有紀錄 → 建立新視窗
+    if user_id not in store:
+        store[user_id] = {
+            "window_start": now,
+            "count": 0
+        }
+
+    window_start = store[user_id]["window_start"]
+
+    # 超過 6 小時 → 重設
+    if now - window_start >= timedelta(hours=6):
+        store[user_id] = {
+            "window_start": now,
+            "count": 0
+        }
+
+    # 檢查次數
+    if store[user_id]["count"] >= 10:
+        raise HTTPException(
+            status_code=403,
+            detail="Limit reached (10 requests per 6 hours). Upgrade required."
+        )
+
+    store[user_id]["count"] += 1
+    print("Rolling 6h Count:", store[user_id]["count"])
+
+    # ===== 原本 chat completion 邏輯繼續執行 =====
     
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
@@ -2628,5 +2672,3 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
-
-app.add_middleware(RollingLimitMiddleware)
