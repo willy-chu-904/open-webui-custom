@@ -1672,7 +1672,7 @@ async def chat_completion(
 ):
 
     # ===== Admin 無限制 =====
-    if getattr(user, "role", None) != "admin":
+    if getattr(user, "role", None) not in ["admin", "pro"]:
 
         # ===== Rolling 6-Hour Limit =====
         if not hasattr(chat_completion, "limit_store"):
@@ -2119,16 +2119,13 @@ async def list_tasks_by_chat_id_endpoint(
 async def get_app_config(request: Request):
     user = None
     token = None
-
     auth_header = request.headers.get("Authorization")
     if auth_header:
         cred = get_http_authorization_cred(auth_header)
         if cred:
             token = cred.credentials
-
     if not token and "token" in request.cookies:
         token = request.cookies.get("token")
-
     if token:
         try:
             data = decode_token(token)
@@ -2140,13 +2137,12 @@ async def get_app_config(request: Request):
             )
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
-
+    
     user_count = Users.get_num_users()
     onboarding = False
-
     if user is None:
         onboarding = user_count == 0
-
+    
     return {
         **({"onboarding": True} if onboarding else {}),
         "status": True,
@@ -2254,11 +2250,18 @@ async def get_app_config(request: Request):
                     {
                         "active_entries": app.state.USER_COUNT,
                     }
-                    if user.role == "admin"
+                    if user and user.role == "admin"  # 只有 admin 可見
                     else {}
                 ),
+                # 添加用戶角色信息（Pro 和 Admin 都可見自己的角色）
+                "user": {
+                    "id": user.id,
+                    "role": user.role,
+                    "is_pro": user.role == "pro",
+                    "is_admin": user.role == "admin",
+                },
             }
-            if user is not None and (user.role in ["admin", "user"])
+            if user is not None and user.role in ["admin", "user", "pro"]
             else {
                 **(
                     {
