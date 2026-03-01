@@ -41,6 +41,17 @@ daily_date = Column(String, default="")
 # User DB Schema
 ####################
 
+# 在 user.py 文件頂部，imports 之後加入
+class UserRole:
+    PENDING = "pending"
+    USER = "user"
+    PRO = "pro"
+    ADMIN = "admin"
+    
+    ALL = [PENDING, USER, PRO, ADMIN]
+    ADMIN_ROLES = [ADMIN]
+    USER_ROLES = [USER, PRO]
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
@@ -82,12 +93,28 @@ class User(Base):
     created_at = Column(BigInteger)
 
 
+# 在 UserModel 類中添加角色驗證器
 class UserModel(BaseModel):
     id: str
-
     email: str
     username: Optional[str] = None
     role: str = "pending"
+    # ... 其他欄位 ...
+    model_config = ConfigDict(from_attributes=True)
+    
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        allowed_roles = ["pending", "user", "pro", "admin"]
+        if v not in allowed_roles:
+            raise ValueError(f"Invalid role: {v}. Must be one of {allowed_roles}")
+        return v
+    
+    @model_validator(mode="after")
+    def set_profile_image_url(self):
+        if not self.profile_image_url:
+            self.profile_image_url = f"/api/v1/users/{self.id}/profile/image"
+        return self
 
     name: str
 
@@ -855,6 +882,24 @@ class UsersTable:
                 three_minutes_ago = int(time.time()) - 180
                 return user.last_active_at >= three_minutes_ago
             return False
+
+    def is_admin_user(self, user_id: str, db: Optional[Session] = None) -> bool:
+        """檢查用戶是否為管理員"""
+        with get_db_context(db) as db:
+            user = db.query(User).filter_by(id=user_id).first()
+            return user.role == "admin" if user else False
+    
+    def is_pro_user(self, user_id: str, db: Optional[Session] = None) -> bool:
+        """檢查用戶是否為 Pro 用戶"""
+        with get_db_context(db) as db:
+            user = db.query(User).filter_by(id=user_id).first()
+            return user.role == "pro" if user else False
+    
+    def get_pro_users(self, db: Optional[Session] = None) -> list[UserModel]:
+        """獲取所有 Pro 用戶"""
+        with get_db_context(db) as db:
+            users = db.query(User).filter(User.role == "pro").all()
+            return [UserModel.model_validate(user) for user in users]
 
 
 Users = UsersTable()
