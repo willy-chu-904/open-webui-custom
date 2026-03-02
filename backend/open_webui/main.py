@@ -1680,7 +1680,6 @@ async def embeddings(
     return await generate_embeddings(request, form_data, user)
 
 
-@app.post("/api/chat/completions")
 @app.post("/api/v1/chat/completions")  # Experimental: Compatibility with OpenAI API
 @app.post("/api/chat/completions")
 async def chat_completion(
