@@ -27,7 +27,7 @@ from sqlalchemy import (
     exists,
     select,
     cast,
-    Integer,
+    Integer
 )
 from sqlalchemy import or_, case, func
 from sqlalchemy.dialects.postgresql import JSONB
