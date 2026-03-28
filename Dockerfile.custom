@@ -1,0 +1,7 @@
+FROM ghcr.io/open-webui/open-webui:main
+
+# 複製修改的後端文件
+COPY backend/open_webui/utils/auth.py /app/backend/open_webui/utils/auth.py
+COPY backend/open_webui/main.py /app/backend/open_webui/main.py
+COPY backend/open_webui/models/users.py /app/backend/open_webui/models/users.py
+COPY backend/open_webui/env.py /app/backend/open_webui/env.py
