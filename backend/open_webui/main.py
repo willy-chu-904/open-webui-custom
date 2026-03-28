@@ -2191,7 +2191,7 @@ async def get_app_config(request: Request):
                     "is_admin": user.role == "admin",
                 },
             }
-            if user is not None and (user.role in ['admin', 'user'])
+            if user is not None and (user.role in ['admin', 'user', 'pro'])
             else {
                 **(
                     {
