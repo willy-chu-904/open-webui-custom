@@ -339,13 +339,6 @@ async def get_current_user(
                     detail=ERROR_MESSAGES.INVALID_TOKEN,
                 )
             else:
-                    # 添加 Pro 角色支持
-    if user.role not in {"user", "admin", "pro"}:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-    
                 if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
                     trusted_email = request.headers.get(WEBUI_AUTH_TRUSTED_EMAIL_HEADER, '').lower()
                     if trusted_email and user.email != trusted_email:
@@ -420,7 +413,7 @@ def get_current_user_by_api_key(request, api_key: str):
 
 
 def get_verified_user(user=Depends(get_current_user)):
-    if user.role not in {'user', 'admin', 'pro'}:
+    if user.role not in {'user', 'admin'}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
