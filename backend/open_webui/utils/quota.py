@@ -1,6 +1,6 @@
- from datetime import datetime 
- from sqlalchemy.orm import Session 
- from open_webui.models.daily_usage import DailyUsage 
+from datetime import datetime 
+from sqlalchemy.orm import Session 
+from open_webui.models.daily_usage import DailyUsage 
 
  DAILY_LIMIT = 10 
 
