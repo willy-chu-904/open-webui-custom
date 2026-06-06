@@ -598,7 +598,7 @@ if SAFE_MODE:
     # Functions.deactivate_all_functions() is awaited in lifespan below
 
    # ===== Admin 無限制 =====
-if getattr(user, "role", None) not in ["admin", "pro"]:
+if getattr(users, "role", None) not in ["admin", "pro"]:
 
     # ===== Rolling 6-Hour Limit =====
     if not hasattr(chat_completion, "limit_store"):
