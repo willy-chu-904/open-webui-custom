@@ -618,8 +618,8 @@ if SAFE_MODE:
  
         window_start = store[user_id]["window_start"] 
  
-        # 超過 6 小時重設+
-        if now - window_start >= timedelta(hours=6): 
+        # 超過 6 小時重設
+         if now - window_start >= timedelta(hours=6): 
             store[user_id] = { 
                 "window_start": now, 
                 "count": 0 
@@ -632,13 +632,13 @@ if SAFE_MODE:
 6 hours)."
 
             ) 
- 
+
         store[user_id]["count"] += 1 
         print("Rolling 6h Count:", store[user_id]
 ["count"])
 
 
-# ===== 原本程式繼續 =====
+    # ===== 原本程式繼續 =====
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
