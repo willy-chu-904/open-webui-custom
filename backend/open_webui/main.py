@@ -1676,39 +1676,39 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
 
- # ===== Admin 無限制 =====
-if getattr(user, "role", None) not in ["admin", "pro"]:
+    # ===== Admin 無限制 =====
+    if getattr(user, "role", None) not in ["admin", "pro"]:
 
-    # ===== Rolling 6-Hour Limit =====
-    if not hasattr(chat_completion, "limit_store"):
-        chat_completion.limit_store = {}
+        # ===== Rolling 6-Hour Limit =====
+        if not hasattr(chat_completion, "limit_store"):
+            chat_completion.limit_store = {}
 
-    store = chat_completion.limit_store
-    user_id = user.id
-    now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
+        store = chat_completion.limit_store
+        user_id = user.id
+        now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
 
-    if user_id not in store:
-        store[user_id] = {
-            "window_start": now,
-            "count": 0
-        }
+        if user_id not in store:
+            store[user_id] = {
+                "window_start": now,
+                "count": 0
+            }
 
-    window_start = store[user_id]["window_start"]
+        window_start = store[user_id]["window_start"]
 
-    # 超過 6 小時重設
-    if now - window_start >= timedelta(hours=6):
-        store[user_id] = {
-            "window_start": now,
-            "count": 0
-        }
+        # 超過 6 小時重設
+        if now - window_start >= timedelta(hours=6):
+            store[user_id] = {
+                "window_start": now,
+                "count": 0
+            }
 
-    if store[user_id]["count"] >= 10:
-        raise HTTPException(
-            status_code=403,
-            detail="Limit reached (10 requests per 6 hours)."
-        )
+        if store[user_id]["count"] >= 10:
+            raise HTTPException(
+                status_code=403,
+                detail="Limit reached (10 requests per 6 hours)."
+            )
 
-    store[user_id]["count"] += 1
+        store[user_id]["count"] += 1
     print("Rolling 6h Count:", store[user_id]["count"])
 
 # ===== 原本程式繼續 =====
