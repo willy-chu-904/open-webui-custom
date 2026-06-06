@@ -421,6 +421,11 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
+
+from fastapi import HTTPException, Depends, Request 
+from datetime import datetime, timedelta 
+from zoneinfo import ZoneInfo
+
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AUDIT_EXCLUDED_PATHS,
@@ -591,6 +596,49 @@ from open_webui.utils.tools import set_terminal_servers, set_tool_servers
 if SAFE_MODE:
     print('SAFE MODE ENABLED')
     # Functions.deactivate_all_functions() is awaited in lifespan below
+
+    # ===== Admin 無限制 ===== +
+    if getattr(user, "role", None) not in ["admin", 
+"pro"]:
+
+
+        # ===== Rolling 6-Hour Limit ===== +
+        if not hasattr(chat_completion, "limit_store"): 
+            chat_completion.limit_store = {} 
+
+        store = chat_completion.limit_store 
+        user_id = user.id 
+        now = datetime.now(ZoneInfo("Asia/Hong_Kong")) 
+
+        if user_id not in store: 
+            store[user_id] = { 
+                "window_start": now, 
+                "count": 0 
+            } 
+ 
+        window_start = store[user_id]["window_start"] 
+ 
+        # 超過 6 小時重設+
+        if now - window_start >= timedelta(hours=6): 
+            store[user_id] = { 
+                "window_start": now, 
+                "count": 0 
+            } 
+
+        if store[user_id]["count"] >= 10: 
+            raise HTTPException( 
+                status_code=403, 
+                detail="Limit reached (10 requests per 
+6 hours)."
+
+            ) 
+ 
+        store[user_id]["count"] += 1 
+        print("Rolling 6h Count:", store[user_id]
+["count"])
+
+
+# ===== 原本程式繼續 =====
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -2508,11 +2556,19 @@ async def get_app_config(request: Request):
                     {
                         'active_entries': app.state.USER_COUNT,
                     }
-                    if user.role == 'admin'
+                    if user and user.role == 'admin' # 只有 admin 可見
                     else {}
                 ),
+                 # 添加用戶角色信息（Pro 和 Admin 都可見自己的角色）
+
+                "user": { 
+                    "id": user.id, 
+                    "role": user.role, 
+                    "is_pro": user.role == "pro", 
+                    "is_admin": user.role == "admin", 
+                },
             }
-            if user is not None and (user.role in ['admin', 'user'])
+            if user is not None and (user.role in ['admin', 'user', 'pro'])
             else {
                 **(
                     {
