@@ -197,7 +197,7 @@
 			await goto('/auth');
 			return;
 		}
-		if (!['user', 'admin'', 'pro'].includes($user?.role)) {
+		if (!['user', 'admin', 'pro'].includes($user?.role)) {
 			return;
 		}
 
