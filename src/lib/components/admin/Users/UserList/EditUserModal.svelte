@@ -146,7 +146,7 @@
 												required
 											>
 												<option value="admin">{$i18n.t('Admin')}</option>
-												<option value="admin">{$i18n.t('pro')}</option>
+												<option value="admin">{$i18n.t('Pro')}</option>
 												<option value="user">{$i18n.t('User')}</option>
 												<option value="pending">{$i18n.t('Pending')}</option>
 											</select>
