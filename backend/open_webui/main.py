@@ -1675,7 +1675,6 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-
     # ===== Admin 無限制 =====
     if getattr(user, "role", None) not in ["admin", "pro"]:
 
@@ -1709,9 +1708,9 @@ async def chat_completion(
             )
 
         store[user_id]["count"] += 1
-    print("Rolling 6h Count:", store[user_id]["count"])
+        print("Rolling 6h Count:", store[user_id]["count"])
 
-# ===== 原本程式繼續 =====
+    # ===== 原本程式繼續 =====
     
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
