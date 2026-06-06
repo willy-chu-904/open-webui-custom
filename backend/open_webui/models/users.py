@@ -40,14 +40,14 @@ daily_date = Column(String, default="")
 # daily bread of every session. Let none go hungry.
 ####################
 
- class UserRole: 
-    PENDING = "pending" 
-    USER = "user" 
-    PRO = "pro
-    ADMIN = "admin" 
+class UserRole:
+    PENDING = "pending"
+    USER = "user"
+    PRO = "pro"
+    ADMIN = "admin"
 
-    ALL = [PENDING, USER, PRO, ADMIN] 
-    ADMIN_ROLES = [ADMIN] 
+    ALL = [PENDING, USER, PRO, ADMIN]
+    ADMIN_ROLES = [ADMIN]
     USER_ROLES = [USER, PRO]
 
 
@@ -55,7 +55,6 @@ class UserSettings(BaseModel):
     ui: dict | None = {}
     model_config = ConfigDict(extra='allow')
     pass
-
 
 class User(Base):  # identity & profile
     """One row per registered account — profile, role, and settings."""
